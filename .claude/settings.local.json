@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sv https://www.reviewnote.co.kr/campaigns/1207739 -H 'User-Agent: Mozilla/5.0')",
+      "Bash(curl -s https://www.reviewnote.co.kr/ -H 'User-Agent: Mozilla/5.0')",
+      "Bash(curl -s \"https://www.reviewnote.co.kr/_next/data/$\\(curl -s https://www.reviewnote.co.kr/ -H 'User-Agent: Mozilla/5.0')",
+      "Bash(curl -s -L -A 'Mozilla/5.0 \\(Macintosh; Intel Mac OS X 10_15_7\\) AppleWebKit/537.36 \\(KHTML, like Gecko\\) Chrome/124.0.0.0 Safari/537.36' 'https://dinnerqueen.net/taste?area1=서울&sort=신청+마감순&page=1')",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

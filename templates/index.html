@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>체험단 알리미</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-gray-50">
+
+<div id="pbar" class="hidden fixed top-0 left-0 z-50 h-[3px] bg-blue-500" style="width:0%"></div>
+
+<!-- ══ HEADER ═══════════════════════════════════════════════════════════ -->
+<header id="mainHeader" class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100">
+  <div class="max-w-[1440px] mx-auto px-5 md:px-12">
+
+    <!-- Mobile -->
+    <div class="lg:hidden flex items-center justify-between py-3.5 gap-3">
+      <div class="min-w-0 flex-1">
+        <h1 class="font-bold text-gray-900 text-[15px] cursor-pointer" onclick="showTab('home')">체험단 알리미</h1>
+        <p id="statusM" class="text-[11px] text-gray-400 mt-0.5 truncate">로딩 중...</p>
+      </div>
+      <button id="btnM" onclick="runScrape()"
+        class="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex-shrink-0">
+        <svg id="iconM" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round">
+          <path d="M1 4v6h6M23 20v-6h-6"/>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
+        </svg>
+        <svg id="spinM" class="hidden spin" width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="#9ca3af" stroke-width="3" stroke-dasharray="50" stroke-dashoffset="15" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Desktop -->
+    <div class="hidden lg:flex items-center gap-8">
+      <div class="flex-shrink-0 py-3">
+        <h1 class="font-bold text-gray-900 text-[17px] tracking-tight leading-tight cursor-pointer" onclick="showTab('home')">체험단 알리미</h1>
+      </div>
+      <nav class="flex gap-1">
+        <button id="dt-home" onclick="showTab('home')" class="px-4 py-3 text-sm dtab-on transition-colors">추천</button>
+        <button id="dt-settings" onclick="showTab('settings')" class="px-4 py-3 text-sm dtab-off transition-colors">설정</button>
+        <button id="dt-preview" onclick="showTab('preview')" class="px-4 py-3 text-sm dtab-off transition-colors">알림</button>
+      </nav>
+      <div class="ml-auto flex items-center gap-3">
+        <span id="statusD" class="text-xs text-gray-400">로딩 중...</span>
+        <button id="btnD" onclick="runScrape()"
+          class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-medium transition-colors">
+          <svg id="iconD" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M1 4v6h6M23 20v-6h-6"/>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
+          </svg>
+          <svg id="spinD" class="hidden spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="#9ca3af" stroke-width="3" stroke-dasharray="50" stroke-dashoffset="15" stroke-linecap="round"/>
+          </svg>
+          <span id="btnTxtD">새로고침</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ FILTER BAR ═════════════════════════════════════════════════════ -->
+<div id="filterBar" style="position:sticky; top:0; z-index:20; display:grid; grid-template-rows:0fr; overflow:hidden;"
+     class="bg-white">
+  <div class="min-h-0 overflow-hidden">
+    <div class="border-b border-gray-100">
+      <div class="max-w-[1440px] mx-auto px-5 md:px-12 py-2.5">
+
+        <!-- Mobile: 필터 버튼 + 정렬 -->
+        <div class="flex lg:hidden items-center gap-2">
+          <button onclick="openFilterSheet()" id="mFilterBtn"
+            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-gray-200 bg-white text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
+            </svg>
+            필터
+            <span id="mFilterBadge" class="hidden bg-blue-500 text-white text-[10px] font-bold w-4 h-4 rounded-full inline-flex items-center justify-center leading-none"></span>
+          </button>
+          <select id="sortSelectM" onchange="setSort(this.value)"
+            class="sort-select ml-auto text-sm text-gray-600 border border-gray-200 rounded-full px-3 py-1.5 bg-white focus:outline-none cursor-pointer flex-shrink-0 min-w-[7rem]">
+            <option value="score">추천순</option>
+            <option value="deadline">마감임박순</option>
+          </select>
+        </div>
+
+        <!-- Desktop: 드롭다운 칩 -->
+        <div class="hidden lg:flex items-center gap-2">
+
+          <!-- 플랫폼 -->
+          <div class="relative" id="dd-platform">
+            <button onclick="toggleDropdown('platform')" id="chip-platform"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              <span id="chip-platform-label">플랫폼</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="panel-platform" class="hidden absolute top-full left-0 mt-1.5 bg-white border border-gray-100 rounded-xl shadow-lg z-50 min-w-[145px] py-1.5">
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-리뷰노트" onchange="togglePlatform('리뷰노트', this.checked)" class="w-3.5 h-3.5 rounded">리뷰노트
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-디너의여왕" onchange="togglePlatform('디너의여왕', this.checked)" class="w-3.5 h-3.5 rounded">디너의여왕
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-강남맛집" onchange="togglePlatform('강남맛집', this.checked)" class="w-3.5 h-3.5 rounded">강남맛집
+              </label>
+            </div>
+          </div>
+
+          <!-- 카테고리 -->
+          <div class="relative" id="dd-category">
+            <button onclick="toggleDropdown('category')" id="chip-category"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              <span id="chip-category-label">카테고리</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="panel-category" class="hidden absolute top-full left-0 mt-1.5 bg-white border border-gray-100 rounded-xl shadow-lg z-50 min-w-[145px] py-1.5">
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-cat-식당/술집" onchange="toggleCategory('식당/술집', this.checked)" class="w-3.5 h-3.5 rounded">식당/술집
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-cat-카페/디저트" onchange="toggleCategory('카페/디저트', this.checked)" class="w-3.5 h-3.5 rounded">카페/디저트
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-cat-미용/뷰티" onchange="toggleCategory('미용/뷰티', this.checked)" class="w-3.5 h-3.5 rounded">미용/뷰티
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-cat-운동/관리" onchange="toggleCategory('운동/관리', this.checked)" class="w-3.5 h-3.5 rounded">운동/관리
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-cat-기타" onchange="toggleCategory('기타', this.checked)" class="w-3.5 h-3.5 rounded">기타
+              </label>
+            </div>
+          </div>
+
+          <!-- 채널 -->
+          <div class="relative" id="dd-channel">
+            <button onclick="toggleDropdown('channel')" id="chip-channel"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              <span id="chip-channel-label">채널</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="panel-channel" class="hidden absolute top-full left-0 mt-1.5 bg-white border border-gray-100 rounded-xl shadow-lg z-50 min-w-[135px] py-1.5">
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-ch-블로그" onchange="toggleChannel('블로그', this.checked)" class="w-3.5 h-3.5 rounded">블로그
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-ch-블로그클립" onchange="toggleChannel('블로그클립', this.checked)" class="w-3.5 h-3.5 rounded">블로그클립
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-ch-인스타" onchange="toggleChannel('인스타', this.checked)" class="w-3.5 h-3.5 rounded">인스타
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-ch-클립" onchange="toggleChannel('클립', this.checked)" class="w-3.5 h-3.5 rounded">클립
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-ch-릴스" onchange="toggleChannel('릴스', this.checked)" class="w-3.5 h-3.5 rounded">릴스
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-ch-쇼츠" onchange="toggleChannel('쇼츠', this.checked)" class="w-3.5 h-3.5 rounded">쇼츠
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
+                <input type="checkbox" id="chk-ch-유튜브" onchange="toggleChannel('유튜브', this.checked)" class="w-3.5 h-3.5 rounded">유튜브
+              </label>
+            </div>
+          </div>
+
+          <!-- 정렬 -->
+          <select id="sortSelect" onchange="setSort(this.value)"
+            class="sort-select ml-auto text-sm text-gray-600 border border-gray-200 rounded-full px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer flex-shrink-0 min-w-[7rem]">
+            <option value="score">추천순</option>
+            <option value="deadline">마감임박순</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ COLUMN HEADER — sticky, desktop only ══════════════════════════ -->
+<div id="colHeader" style="display:none; position:sticky; top:0; z-index:10"
+     class="bg-white border-b border-gray-100">
+  <div class="max-w-[1440px] mx-auto flex items-center gap-4 px-12 pr-16 py-3 text-sm text-gray-400 font-medium">
+    <span class="w-10 flex-shrink-0"></span>
+    <span class="w-14 flex-shrink-0"></span>
+    <span class="flex-1 min-w-[240px]">업체 / 지원내용</span>
+    <span class="w-24 flex-shrink-0">위치</span>
+    <span class="w-24 flex-shrink-0">플랫폼</span>
+    <span class="w-16 flex-shrink-0">채널</span>
+    <span class="w-28 flex-shrink-0">신청현황</span>
+    <span class="w-16 flex-shrink-0">마감</span>
+  </div>
+</div>
+
+<!-- ══ MAIN ═══════════════════════════════════════════════════════════ -->
+<main class="max-w-[1440px] mx-auto pb-28 lg:pb-12 px-0 lg:px-12">
+
+  <!-- 추천 탭 -->
+  <div id="tab-home" class="panel on">
+
+    <div id="emptyState" class="flex flex-col items-center justify-center min-h-[70vh] text-center px-8 py-16">
+      <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      </div>
+      <h2 class="font-bold text-gray-800 text-xl mb-2">체험단 알리미</h2>
+      <p class="text-gray-400 text-sm mb-10 leading-relaxed">마감 임박한 체험단 중<br>당첨 확률 높은 곳을 골라드려요</p>
+      <button onclick="runScrape()"
+        class="bg-blue-500 text-white px-10 py-4 rounded-2xl text-base font-bold hover:bg-blue-600 active:bg-blue-700 shadow-lg shadow-blue-200 transition-all">
+        지금 수집하기
+      </button>
+    </div>
+
+    <div id="loadingState" class="hidden flex-col items-center justify-center min-h-[70vh] text-center py-16">
+      <div class="w-14 h-14 border-4 border-blue-100 border-t-blue-500 rounded-full spin mb-6"></div>
+      <p class="font-semibold text-gray-700 mb-1.5">수집 중이에요</p>
+      <p class="text-gray-400 text-sm">3개 사이트에서 가져오는 중 · 약 20~30초 소요</p>
+    </div>
+
+    <div id="campaignList" class="hidden divide-y divide-gray-100 bg-white"></div>
+
+    <div id="sentinel" class="hidden h-20 flex items-center justify-center">
+      <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-500 rounded-full spin"></div>
+    </div>
+
+    <div id="allDone" class="hidden text-center py-8">
+      <p class="text-xs text-gray-300">— 전체 <span id="totalCnt">0</span>개 표시 완료 —</p>
+    </div>
+  </div>
+
+  <!-- 설정 탭 -->
+  <div id="tab-settings" class="panel px-5 lg:px-0 py-6">
+    <div class="max-w-lg">
+      <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">필터</p>
+      <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-5 shadow-sm">
+        <label class="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+          <div>
+            <p class="text-sm font-medium text-gray-800">마감 기한</p>
+            <p class="text-xs text-gray-400 mt-0.5">D-N 이내 캠페인만 표시</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="set_deadline" type="number" min="1" max="7"
+              value="{{ config.filter.max_deadline_days if config.filter else 2 }}"
+              class="w-14 text-center border border-gray-200 rounded-xl py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+            <span class="text-xs text-gray-400">일</span>
+          </div>
+        </label>
+        <label class="flex items-center justify-between px-5 py-4">
+          <div>
+            <p class="text-sm font-medium text-gray-800">최대 경쟁률</p>
+            <p class="text-xs text-gray-400 mt-0.5">이 수치 미만만 표시</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="set_ratio" type="number" min="1" max="20" step="0.5"
+              value="{{ config.filter.max_ratio if config.filter else 3.0 }}"
+              class="w-14 text-center border border-gray-200 rounded-xl py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+            <span class="text-xs text-gray-400">:1</span>
+          </div>
+        </label>
+      </div>
+
+      <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">지역</p>
+      <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-5 shadow-sm">
+        <label class="block px-5 py-4 border-b border-gray-50">
+          <p class="text-sm font-medium text-gray-800">선호 구</p>
+          <p class="text-xs text-gray-400 mt-0.5 mb-2">이 구에 있는 캠페인만 표시 · 쉼표로 구분</p>
+          <input id="set_districts" type="text"
+            value="{{ config.preferred_districts | join(', ') if config.preferred_districts else '' }}"
+            placeholder="도봉, 강북, 노원, 성북"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+        </label>
+        <label class="block px-5 py-4">
+          <p class="text-sm font-medium text-gray-800">집 근처 구</p>
+          <p class="text-xs text-gray-400 mt-0.5 mb-2">우선순위 보너스 점수 · 쉼표로 구분</p>
+          <input id="set_home_districts" type="text"
+            value="{{ config.home_districts | join(', ') if config.home_districts else '' }}"
+            placeholder="도봉, 강북, 성북"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+        </label>
+      </div>
+
+      <button onclick="saveSettings()"
+        class="w-full bg-blue-500 text-white py-3.5 rounded-2xl text-sm font-semibold hover:bg-blue-600 transition-colors">
+        저장하기
+      </button>
+      <p id="settingsSaved" class="hidden mt-3 text-center text-green-600 text-sm font-medium">저장됐어요!</p>
+    </div>
+  </div>
+
+  <!-- 알림 탭 -->
+  <div id="tab-preview" class="panel px-5 lg:px-0 py-6">
+    <div class="max-w-sm">
+      <div class="flex items-center justify-between mb-4">
+        <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">카카오톡 미리보기</p>
+        <button id="sendBtn" onclick="sendKakao()"
+          class="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-xs font-semibold hover:bg-yellow-500 transition-colors">
+          전송하기
+        </button>
+      </div>
+      <div class="bg-[#90b4cc] rounded-2xl p-5">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 text-yellow-900">나</div>
+          <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm max-w-xs">
+            <pre id="previewText" class="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed" style="font-family:inherit;">수집하기를 먼저 눌러주세요.</pre>
+          </div>
+        </div>
+      </div>
+      <p id="sendResult" class="hidden mt-4 text-center text-sm"></p>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══ MOBILE BOTTOM NAV ═══════════════════════════════════════════════ -->
+<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-gray-100 px-3 py-2">
+  <div class="flex gap-1.5">
+    <button id="mn-home" onclick="showTab('home')"
+      class="flex-1 flex flex-col items-center gap-0.5 py-2 px-2 rounded-2xl text-xs font-medium nav-on transition-all">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span>추천</span>
+    </button>
+    <button id="mn-settings" onclick="showTab('settings')"
+      class="flex-1 flex flex-col items-center gap-0.5 py-2 px-2 rounded-2xl text-xs font-medium nav-off transition-all">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span>설정</span>
+    </button>
+    <button id="mn-preview" onclick="showTab('preview')"
+      class="flex-1 flex flex-col items-center gap-0.5 py-2 px-2 rounded-2xl text-xs font-medium nav-off transition-all">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>알림</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ══ BACKDROP (detail panel) ══════════════════════════════════════════ -->
+<div id="panelBackdrop" onclick="closePanel()"></div>
+
+<!-- ══ DETAIL PANEL ═════════════════════════════════════════════════════ -->
+<div id="detailPanel">
+  <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-4 mb-2 lg:hidden"></div>
+  <div class="hidden lg:flex items-center gap-3 px-6 pt-5 pb-3 lg:px-8">
+    <button onclick="closePanel()" class="flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors flex-shrink-0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+    </button>
+    <span class="font-semibold text-gray-900 text-base">상세보기</span>
+  </div>
+  <div id="panelContent" class="px-6 pb-12 lg:px-8"></div>
+</div>
+
+<!-- ══ MOBILE FILTER BOTTOM SHEET ════════════════════════════════════ -->
+<div id="filterSheetBackdrop" onclick="closeFilterSheet()"></div>
+<div id="filterSheet">
+  <div class="flex justify-center pt-3 pb-1">
+    <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+  </div>
+  <div class="flex items-center justify-between px-5 py-3 flex-shrink-0">
+    <span class="font-bold text-gray-900 text-[17px]">필터</span>
+    <button onclick="resetFilters()" class="text-sm text-blue-500 font-medium px-1">초기화</button>
+  </div>
+  <div class="px-5 overflow-y-auto flex-1">
+    <div class="mb-7">
+      <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">플랫폼</p>
+      <div class="flex flex-wrap gap-2">
+        <button class="pill-off" data-filter-type="platform" data-filter-val="리뷰노트" onclick="toggleSheetPill(this,'platform','리뷰노트')">리뷰노트</button>
+        <button class="pill-off" data-filter-type="platform" data-filter-val="디너의여왕" onclick="toggleSheetPill(this,'platform','디너의여왕')">디너의여왕</button>
+        <button class="pill-off" data-filter-type="platform" data-filter-val="강남맛집" onclick="toggleSheetPill(this,'platform','강남맛집')">강남맛집</button>
+      </div>
+    </div>
+    <div class="mb-7">
+      <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">카테고리</p>
+      <div class="flex flex-wrap gap-2">
+        <button class="pill-off" data-filter-type="category" data-filter-val="식당/술집" onclick="toggleSheetPill(this,'category','식당/술집')">식당/술집</button>
+        <button class="pill-off" data-filter-type="category" data-filter-val="카페/디저트" onclick="toggleSheetPill(this,'category','카페/디저트')">카페/디저트</button>
+        <button class="pill-off" data-filter-type="category" data-filter-val="미용/뷰티" onclick="toggleSheetPill(this,'category','미용/뷰티')">미용/뷰티</button>
+        <button class="pill-off" data-filter-type="category" data-filter-val="운동/관리" onclick="toggleSheetPill(this,'category','운동/관리')">운동/관리</button>
+        <button class="pill-off" data-filter-type="category" data-filter-val="기타" onclick="toggleSheetPill(this,'category','기타')">기타</button>
+      </div>
+    </div>
+    <div class="mb-7">
+      <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">채널</p>
+      <div class="flex flex-wrap gap-2">
+        <button class="pill-off" data-filter-type="channel" data-filter-val="블로그" onclick="toggleSheetPill(this,'channel','블로그')">블로그</button>
+        <button class="pill-off" data-filter-type="channel" data-filter-val="블로그클립" onclick="toggleSheetPill(this,'channel','블로그클립')">블로그클립</button>
+        <button class="pill-off" data-filter-type="channel" data-filter-val="인스타" onclick="toggleSheetPill(this,'channel','인스타')">인스타</button>
+        <button class="pill-off" data-filter-type="channel" data-filter-val="클립" onclick="toggleSheetPill(this,'channel','클립')">클립</button>
+        <button class="pill-off" data-filter-type="channel" data-filter-val="릴스" onclick="toggleSheetPill(this,'channel','릴스')">릴스</button>
+        <button class="pill-off" data-filter-type="channel" data-filter-val="쇼츠" onclick="toggleSheetPill(this,'channel','쇼츠')">쇼츠</button>
+        <button class="pill-off" data-filter-type="channel" data-filter-val="유튜브" onclick="toggleSheetPill(this,'channel','유튜브')">유튜브</button>
+      </div>
+    </div>
+  </div>
+  <div class="px-5 py-4 border-t border-gray-100 flex-shrink-0">
+    <button onclick="closeFilterSheet()" class="w-full bg-blue-500 text-white py-3.5 rounded-2xl text-sm font-semibold hover:bg-blue-600 transition-colors">
+      적용
+    </button>
+  </div>
+</div>
+
+<!-- ══ JAVASCRIPT ══════════════════════════════════════════════════════ -->
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────
+  let all = [];
+  let displayN = 10;
+  let sortMode = 'score';
+  let selPlatforms  = new Set();
+  let selCategories = new Set();
+  let selChannels   = new Set();
+  const PAGE = 10;
+  const TABS = ['home','settings','preview'];
+  const BADGE = { fire:'b-fire', star:'b-star', normal:'b-normal', tough:'b-tough' };
+
+  // ── Sticky top calculation ─────────────────────────────────────────────────
+  let _filterScrollHidden = false;
+  let _filterBarActive = false;
+  let _lastScrollY = 0;
+  let _transitionRAF = null;
+
+  function _calcTops() {
+    const mainH = document.getElementById('mainHeader')?.offsetHeight || 0;
+    const fb = document.getElementById('filterBar');
+    const fbH = fb ? fb.offsetHeight : 0;
+    if (fb) fb.style.top = mainH + 'px';
+    const ch = document.getElementById('colHeader');
+    if (ch) ch.style.top = (mainH + fbH) + 'px';
+  }
+
+  function _startTransitionLoop() {
+    if (_transitionRAF) cancelAnimationFrame(_transitionRAF);
+    (function loop() { _calcTops(); _transitionRAF = requestAnimationFrame(loop); })();
+    setTimeout(() => { if (_transitionRAF) { cancelAnimationFrame(_transitionRAF); _transitionRAF = null; } }, 350);
+  }
+
+  window.addEventListener('resize', _calcTops, { passive: true });
+
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    const fb = document.getElementById('filterBar');
+    if (!fb || !_filterBarActive) { _lastScrollY = y; return; }
+    if (y > _lastScrollY && y > 60 && !_filterScrollHidden) {
+      _filterScrollHidden = true;
+      fb.style.gridTemplateRows = '0fr';
+      _startTransitionLoop();
+    } else if (y < _lastScrollY && _filterScrollHidden) {
+      _filterScrollHidden = false;
+      fb.style.gridTemplateRows = '1fr';
+      _startTransitionLoop();
+    }
+    _lastScrollY = y;
+  }, { passive: true });
+
+  // ── Boot ───────────────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const data = await fetch('/api/campaigns').then(r => r.json());
+      if (data.campaigns.length) {
+        all = data.campaigns;
+        displayN = PAGE;
+        showFilters();
+        renderVisible();
+        setStatus(`이전 수집 결과 · ${all.length}개 추천`);
+      } else {
+        runScrape();
+      }
+    } catch { /* keep empty state */ }
+  });
+
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  function showTab(name) {
+    TABS.forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('on', t === name);
+      const m = document.getElementById('mn-' + t);
+      m.className = m.className.replace(/nav-on|nav-off/g,'').trim() + (t === name ? ' nav-on' : ' nav-off');
+      const d = document.getElementById('dt-' + t);
+      d.className = d.className.replace(/dtab-on|dtab-off/g,'').trim() + (t === name ? ' dtab-on' : ' dtab-off');
+    });
+  }
+
+  // ── Progress bar ───────────────────────────────────────────────────────────
+  let pTimer;
+  function startProg() {
+    const b = document.getElementById('pbar');
+    b.style.display = 'block'; b.style.opacity = '1'; b.style.width = '0%';
+    let p = 0;
+    pTimer = setInterval(() => { p += (88 - p) * 0.05 + 0.4; if (p > 88) p = 88; b.style.width = p + '%'; }, 400);
+  }
+  function endProg() {
+    clearInterval(pTimer);
+    const b = document.getElementById('pbar');
+    b.style.width = '100%';
+    setTimeout(() => {
+      b.style.transition = 'opacity .4s'; b.style.opacity = '0';
+      setTimeout(() => { b.style.display = 'none'; b.style.transition = 'width .35s ease'; b.style.opacity = '1'; }, 400);
+    }, 250);
+  }
+
+  // ── Run scrape ─────────────────────────────────────────────────────────────
+  function setBusy(on) {
+    ['M','D'].forEach(s => {
+      const btn = document.getElementById('btn' + s);
+      const icon = document.getElementById('icon' + s);
+      const spin = document.getElementById('spin' + s);
+      if (!btn) return;
+      btn.disabled = on;
+      icon?.classList.toggle('hidden', on);
+      spin?.classList.toggle('hidden', !on);
+    });
+    const t = document.getElementById('btnTxtD');
+    if (t) t.textContent = on ? '수집 중...' : '새로고침';
+  }
+
+  function setStatus(msg) {
+    ['statusM','statusD'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = msg; });
+  }
+
+  async function runScrape() {
+    setBusy(true); startProg();
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('campaignList').classList.add('hidden');
+    document.getElementById('allDone').classList.add('hidden');
+    document.getElementById('sentinel').classList.add('hidden');
+
+    const fb = document.getElementById('filterBar');
+    if (fb) fb.style.gridTemplateRows = '0fr';
+    const ch = document.getElementById('colHeader');
+    if (ch) ch.style.display = 'none';
+    _filterScrollHidden = false;
+    _filterBarActive = false;
+
+    const ls = document.getElementById('loadingState');
+    ls.classList.remove('hidden'); ls.style.display = 'flex';
+    setStatus('수집 중...');
+
+    try {
+      const data = await fetch('/api/run', { method:'POST' }).then(r => r.json());
+      all = data.campaigns || [];
+      displayN = PAGE;
+      showFilters();
+      renderVisible();
+      updatePreview(all);
+      const err = data.errors?.length ? ` · ${data.errors[0]}` : '';
+      setStatus(`추천 ${all.length}개 · 총 ${data.total_scraped}개 수집${err}`);
+    } catch {
+      setStatus('오류가 발생했어요. 다시 시도해주세요.');
+      document.getElementById('emptyState').classList.remove('hidden');
+    }
+
+    endProg(); setBusy(false);
+    ls.style.display = 'none'; ls.classList.add('hidden');
+  }
+
+  // ── Filter: getFiltered ────────────────────────────────────────────────────
+  function getFiltered() {
+    let list = all;
+    if (selPlatforms.size)  list = list.filter(c => selPlatforms.has(c.platform));
+    if (selCategories.size) list = list.filter(c => selCategories.has(c.category));
+    if (selChannels.size)   list = list.filter(c => selChannels.has(c.channel));
+    if (sortMode === 'deadline') list = [...list].sort((a,b) => a.deadline_days - b.deadline_days || a.ratio - b.ratio);
+    return list;
+  }
+
+  // ── Filter: desktop toggles (checkboxes) ───────────────────────────────────
+  function togglePlatform(name, checked) {
+    if (checked) selPlatforms.add(name); else selPlatforms.delete(name);
+    displayN = PAGE; renderVisible();
+    updateChipLabels(); updateFilterBadge();
+  }
+
+  function toggleCategory(name, checked) {
+    if (checked) selCategories.add(name); else selCategories.delete(name);
+    displayN = PAGE; renderVisible();
+    updateChipLabels(); updateFilterBadge();
+  }
+
+  function toggleChannel(name, checked) {
+    if (checked) selChannels.add(name); else selChannels.delete(name);
+    displayN = PAGE; renderVisible();
+    updateChipLabels(); updateFilterBadge();
+  }
+
+  // ── Filter: sort ──────────────────────────────────────────────────────────
+  function setSort(mode) {
+    sortMode = mode;
+    ['sortSelect','sortSelectM'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = mode;
+    });
+    displayN = PAGE; renderVisible();
+  }
+
+  // ── Filter: desktop dropdown open/close ───────────────────────────────────
+  function toggleDropdown(type) {
+    const panel  = document.getElementById('panel-' + type);
+    const isOpen = !panel.classList.contains('hidden');
+    closeAllDropdowns();
+    if (!isOpen) {
+      panel.classList.remove('hidden');
+      _setFilterOverflow('visible');
+    }
+  }
+
+  function closeAllDropdowns() {
+    ['platform','category','channel'].forEach(t => {
+      document.getElementById('panel-' + t)?.classList.add('hidden');
+    });
+    _setFilterOverflow('hidden');
+  }
+
+  function _setFilterOverflow(val) {
+    const fb = document.getElementById('filterBar');
+    if (!fb) return;
+    fb.style.overflow = val;
+    if (fb.firstElementChild) fb.firstElementChild.style.overflow = val;
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('[id^="dd-"]')) closeAllDropdowns();
+  });
+
+  // ── Filter: chip label update (desktop) ───────────────────────────────────
+  function updateChipLabels() {
+    [['platform', selPlatforms, '플랫폼'], ['category', selCategories, '카테고리'], ['channel', selChannels, '채널']].forEach(([id, set, label]) => {
+      const lbl  = document.getElementById('chip-' + id + '-label');
+      const chip = document.getElementById('chip-' + id);
+      if (!lbl || !chip) return;
+      lbl.textContent = set.size ? label + ' ' + set.size : label;
+      chip.classList.toggle('chip-active', set.size > 0);
+    });
+  }
+
+  // ── Filter: badge update (mobile) ─────────────────────────────────────────
+  function updateFilterBadge() {
+    const total = selPlatforms.size + selCategories.size + selChannels.size;
+    const badge = document.getElementById('mFilterBadge');
+    const btn   = document.getElementById('mFilterBtn');
+    if (!badge || !btn) return;
+    badge.textContent = total;
+    badge.classList.toggle('hidden', total === 0);
+    btn.classList.toggle('chip-active', total > 0);
+  }
+
+  // ── Mobile filter bottom sheet ─────────────────────────────────────────────
+  function openFilterSheet() {
+    syncSheetPills();
+    document.getElementById('filterSheet').classList.add('open');
+    document.getElementById('filterSheetBackdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeFilterSheet() {
+    document.getElementById('filterSheet').classList.remove('open');
+    document.getElementById('filterSheetBackdrop').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function syncSheetPills() {
+    document.querySelectorAll('[data-filter-type]').forEach(btn => {
+      const type = btn.dataset.filterType;
+      const val  = btn.dataset.filterVal;
+      const set  = type === 'platform' ? selPlatforms : type === 'category' ? selCategories : selChannels;
+      btn.className = set.has(val) ? 'pill-on' : 'pill-off';
+    });
+  }
+
+  function toggleSheetPill(btn, type, val) {
+    const set = type === 'platform' ? selPlatforms : type === 'category' ? selCategories : selChannels;
+    if (set.has(val)) set.delete(val); else set.add(val);
+    btn.className = set.has(val) ? 'pill-on' : 'pill-off';
+    displayN = PAGE; renderVisible();
+    updateFilterBadge();
+    updateChipLabels();
+  }
+
+  function resetFilters() {
+    selPlatforms.clear(); selCategories.clear(); selChannels.clear();
+    document.querySelectorAll('[id^="chk-"]').forEach(cb => { cb.checked = false; });
+    syncSheetPills();
+    displayN = PAGE; renderVisible();
+    updateFilterBadge();
+    updateChipLabels();
+  }
+
+  // ── showFilters ────────────────────────────────────────────────────────────
+  function showFilters() {
+    const fb = document.getElementById('filterBar');
+    if (!fb) return;
+    fb.style.gridTemplateRows = '1fr';
+    _filterScrollHidden = false;
+    _filterBarActive = true;
+    requestAnimationFrame(_calcTops);
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderVisible() {
+    const filtered = getFiltered();
+    const visible  = filtered.slice(0, displayN);
+    const list     = document.getElementById('campaignList');
+    const sentinel = document.getElementById('sentinel');
+    const allDone  = document.getElementById('allDone');
+    const ch       = document.getElementById('colHeader');
+
+    if (!filtered.length) {
+      document.getElementById('emptyState').innerHTML =
+        '<p class="text-gray-400 text-sm leading-relaxed mt-12">조건에 맞는 체험단이 없어요.<br>필터나 설정을 변경해보세요.</p>';
+      document.getElementById('emptyState').classList.remove('hidden');
+      list.classList.add('hidden');
+      sentinel.classList.add('hidden');
+      allDone.classList.add('hidden');
+      if (ch) ch.style.display = 'none';
+      return;
+    }
+
+    document.getElementById('emptyState').classList.add('hidden');
+    list.innerHTML = visible.map((c, i) => cardHTML(c, i + 1)).join('');
+    list.classList.remove('hidden');
+
+    if (ch) {
+      ch.style.display = window.innerWidth >= 1024 ? 'block' : 'none';
+      requestAnimationFrame(_calcTops);
+    }
+
+    const more = displayN < filtered.length;
+    sentinel.classList.toggle('hidden', !more);
+    allDone.classList.toggle('hidden', more);
+    if (!more) document.getElementById('totalCnt').textContent = filtered.length;
+  }
+
+  // ── Infinite scroll ────────────────────────────────────────────────────────
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { displayN += PAGE; renderVisible(); }
+  }, { rootMargin:'300px' });
+  observer.observe(document.getElementById('sentinel'));
+
+  // ── Card HTML ──────────────────────────────────────────────────────────────
+  function cardHTML(c, rank) {
+    const idx   = all.indexOf(c);
+    const badge = BADGE[c.score_label] || 'b-normal';
+    const thumbImg = c.thumbnail_url
+      ? `<img src="${x(c.thumbnail_url)}" loading="lazy" onerror="this.style.visibility='hidden'" class="w-full h-full object-cover">` : '';
+    const thumb = `<div class="w-14 h-14 rounded-xl flex-shrink-0 overflow-hidden bg-gray-100">${thumbImg}</div>`;
+
+    const mobile = `
+      <div class="lg:hidden flex items-start gap-3 px-5 py-3.5">
+        ${thumb}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="text-xs px-2 py-0.5 rounded font-semibold flex-shrink-0 ${badge}">${c.ratio}:1</span>
+            <span class="text-xs font-semibold text-orange-500 ml-auto flex-shrink-0">D-${c.deadline_days}</span>
+          </div>
+          <p class="text-sm font-semibold text-gray-900 leading-snug title-line">${x(c.title)}</p>
+          <div class="flex flex-wrap items-center gap-x-1.5 mt-1 text-xs text-gray-500">
+            <span>${x(c.district)}</span>
+            <span class="text-gray-200">·</span>
+            <span>${c.applicants}/${c.spots}명</span>
+            ${c.benefit ? `<span class="text-gray-200">·</span><span class="text-gray-600">${x(c.benefit)}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+
+    const desktop = `
+      <div class="hidden lg:flex items-center gap-4 py-4 pr-4">
+        <span class="w-10 text-sm text-gray-500 font-medium flex-shrink-0 text-right">${rank}</span>
+        ${thumb}
+        <div class="flex-1 min-w-[240px]">
+          <div class="mb-0.5">
+            <span class="text-xs px-2 py-0.5 rounded font-semibold ${badge}">${c.ratio}:1</span>
+          </div>
+          <p class="text-[15px] font-medium text-gray-900 truncate">${x(c.title)}</p>
+          ${c.benefit ? `<p class="text-[13px] text-gray-500 truncate mt-0.5">${x(c.benefit)}</p>` : `<p class="text-[13px] invisible mt-0.5" aria-hidden="true">&nbsp;</p>`}
+        </div>
+        <div class="w-24 flex-shrink-0 text-sm text-gray-500">${x(c.district)}</div>
+        <div class="w-24 flex-shrink-0 text-sm text-gray-500">${x(c.platform)}</div>
+        <div class="w-16 flex-shrink-0 text-sm text-gray-500">${x(c.channel) || '<span class="text-gray-300">—</span>'}</div>
+        <div class="w-28 flex-shrink-0 text-sm text-gray-500">${c.applicants}/${c.spots}명</div>
+        <div class="w-16 flex-shrink-0 text-sm font-semibold text-orange-500">D-${c.deadline_days}</div>
+      </div>`;
+
+    return `<div onclick="openPanel(${idx})" class="bg-white cursor-pointer hover:bg-gray-50 transition-colors">${mobile}${desktop}</div>`;
+  }
+
+  // ── Panel ──────────────────────────────────────────────────────────────────
+  function openPanel(i) {
+    const c = all[i];
+    if (!c) return;
+    const badge = BADGE[c.score_label] || 'b-normal';
+    const thumb = c.thumbnail_url
+      ? `<div class="w-full rounded-2xl mb-6 overflow-hidden" style="aspect-ratio:4/3"><img src="${x(c.thumbnail_url)}" onerror="this.parentElement.remove()" class="w-full h-full object-cover"></div>` : '';
+
+    document.getElementById('panelContent').innerHTML = `
+      ${thumb}
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-xs px-2.5 py-0.5 rounded font-semibold ${badge}">${c.ratio}:1</span>
+        <span class="text-xs text-gray-500">${x(c.platform)}</span>
+        <span class="font-semibold text-orange-500 ml-auto text-sm">D-${c.deadline_days}</span>
+      </div>
+      <h3 class="font-bold text-gray-900 text-lg leading-snug mb-4">${x(c.title)}</h3>
+      <div class="space-y-3 bg-gray-50 rounded-2xl p-4 mb-5 text-sm">
+        <div class="flex gap-3">
+          <span class="text-gray-400 w-24 flex-shrink-0">위치</span>
+          <span class="text-gray-800 font-medium">${x(c.district)}</span>
+        </div>
+        <div class="flex gap-3">
+          <span class="text-gray-400 w-24 flex-shrink-0">신청 현황</span>
+          <span class="text-gray-800 font-medium">${c.applicants}명 / ${c.spots}명 (${c.ratio}:1)</span>
+        </div>
+        ${c.benefit ? `<div class="flex gap-3">
+          <span class="text-gray-400 w-24 flex-shrink-0">혜택</span>
+          <span class="text-gray-800 font-medium">${x(c.benefit)}</span>
+        </div>` : ''}
+        <div class="flex gap-3">
+          <span class="text-gray-400 w-24 flex-shrink-0">유형</span>
+          <span class="text-gray-800">${x(c.campaign_type)}</span>
+        </div>
+        ${c.channel ? `<div class="flex gap-3">
+          <span class="text-gray-400 w-24 flex-shrink-0">채널</span>
+          <span class="text-gray-800">${x(c.channel)}</span>
+        </div>` : ''}
+        <div class="flex gap-3">
+          <span class="text-gray-400 w-24 flex-shrink-0">카테고리</span>
+          <span class="text-gray-800">${x(c.category)}</span>
+        </div>
+        ${c.review_days != null ? `<div class="flex gap-3">
+          <span class="text-gray-400 w-24 flex-shrink-0">리뷰 등록 마감</span>
+          <span class="text-gray-800 font-medium">D-${c.review_days}</span>
+        </div>` : ''}
+      </div>
+      <a href="${x(c.url)}" target="_blank" rel="noopener"
+        class="block w-full bg-blue-500 text-white text-center py-4 rounded-2xl text-sm font-bold hover:bg-blue-600 transition-colors">
+        신청하러 가기
+      </a>`;
+
+    document.getElementById('panelBackdrop').classList.add('open');
+    document.getElementById('detailPanel').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePanel() {
+    document.getElementById('panelBackdrop').classList.remove('open');
+    document.getElementById('detailPanel').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeFilterSheet(); } });
+
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    const p = document.getElementById('detailPanel');
+    p.style.transition = 'none';
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => { p.style.transition = ''; }, 150);
+  });
+
+  // ── Preview & send ─────────────────────────────────────────────────────────
+  function updatePreview(list) {
+    const el = document.getElementById('previewText');
+    if (!list.length) { el.textContent = '조건에 맞는 체험단이 없어요.'; return; }
+    const lines = [`당첨확률 높은 체험단 ${list.length}개`];
+    list.forEach((c, i) => {
+      const benef = c.benefit ? `\n혜택 ${c.benefit}` : '';
+      lines.push(`\n${'─'.repeat(20)}\n${i+1}. ${c.prob_label}  D-${c.deadline_days}  ${c.district}\n${c.title}${benef}\n신청 ${c.applicants}/${c.spots}명 (${c.ratio}:1)\n${c.url}`);
+    });
+    el.textContent = lines.join('');
+  }
+
+  async function sendKakao() {
+    const btn = document.getElementById('sendBtn');
+    const res = document.getElementById('sendResult');
+    btn.disabled = true; btn.textContent = '전송 중...';
+    res.className = 'hidden mt-4 text-center text-sm';
+    try {
+      const d = await fetch('/api/send', { method:'POST' }).then(r => r.json());
+      res.textContent = d.ok ? '카카오톡 전송 완료!' : d.error;
+      res.classList.add(d.ok ? 'text-green-600' : 'text-red-500');
+    } catch { res.textContent = '전송 실패'; res.classList.add('text-red-500'); }
+    res.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = '전송하기';
+  }
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+  async function saveSettings() {
+    await fetch('/api/settings', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        max_deadline_days:   document.getElementById('set_deadline').value,
+        max_ratio:           document.getElementById('set_ratio').value,
+        preferred_districts: document.getElementById('set_districts').value,
+        home_districts:      document.getElementById('set_home_districts').value,
+      }),
+    });
+    const el = document.getElementById('settingsSaved');
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 2000);
+  }
+
+  // ── XSS escape ────────────────────────────────────────────────────────────
+  function x(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
