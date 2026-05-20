@@ -34,6 +34,7 @@ def scrape(max_pages: int = 10) -> List[Campaign]:
                 AJAX_URL + "?" + AJAX_PARAMS + f"&rpage={rpage}",
                 headers=AJAX_HEADERS,
                 timeout=15,
+                verify=False,
             )
             resp.raise_for_status()
         except requests.RequestException as e:

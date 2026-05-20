@@ -563,8 +563,9 @@
         showFilters();
         renderVisible();
         updatePreview(all);
-        const err = data.errors?.length ? ` · ${data.errors[0]}` : '';
-        setStatus(`추천 ${all.length}개 · 총 ${data.total_scraped}개 수집${err}`);
+        const total = data.total_scraped ?? 0;
+        const err = data.errors?.length ? ` · ⚠️ ${data.errors.join(' / ')}` : '';
+        setStatus(`추천 ${all.length}개 · 총 ${total}개 수집${err}`);
         endProg(); setBusy(false);
         ls.style.display = 'none'; ls.classList.add('hidden');
       } else {
