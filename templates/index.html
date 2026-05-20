@@ -543,21 +543,39 @@
     setStatus('수집 중...');
 
     try {
-      const data = await fetch('/api/run', { method:'POST' }).then(r => r.json());
-      all = data.campaigns || [];
-      displayN = PAGE;
-      showFilters();
-      renderVisible();
-      updatePreview(all);
-      const err = data.errors?.length ? ` · ${data.errors[0]}` : '';
-      setStatus(`추천 ${all.length}개 · 총 ${data.total_scraped}개 수집${err}`);
+      await fetch('/api/run', { method:'POST' });
+      await pollStatus();
     } catch {
       setStatus('오류가 발생했어요. 다시 시도해주세요.');
       document.getElementById('emptyState').classList.remove('hidden');
+      endProg(); setBusy(false);
+      ls.style.display = 'none'; ls.classList.add('hidden');
     }
+  }
 
-    endProg(); setBusy(false);
-    ls.style.display = 'none'; ls.classList.add('hidden');
+  async function pollStatus() {
+    const ls = document.getElementById('loadingState');
+    try {
+      const data = await fetch('/api/status').then(r => r.json());
+      if (data.status === 'done') {
+        all = data.campaigns || [];
+        displayN = PAGE;
+        showFilters();
+        renderVisible();
+        updatePreview(all);
+        const err = data.errors?.length ? ` · ${data.errors[0]}` : '';
+        setStatus(`추천 ${all.length}개 · 총 ${data.total_scraped}개 수집${err}`);
+        endProg(); setBusy(false);
+        ls.style.display = 'none'; ls.classList.add('hidden');
+      } else {
+        setTimeout(pollStatus, 2000);
+      }
+    } catch {
+      setStatus('오류가 발생했어요. 다시 시도해주세요.');
+      document.getElementById('emptyState').classList.remove('hidden');
+      endProg(); setBusy(false);
+      ls.style.display = 'none'; ls.classList.add('hidden');
+    }
   }
 
   // ── Filter: getFiltered ────────────────────────────────────────────────────

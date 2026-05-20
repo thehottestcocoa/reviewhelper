@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import threading
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -23,6 +24,10 @@ CONFIG_PATH = Path(__file__).parent / "config.yaml"
 
 _last_campaigns = []   # Campaign objects (for send)
 _last_results: list[dict] = []   # dicts (for JSON)
+_scrape_running = False
+_scrape_done = False
+_scrape_errors: list[str] = []
+_scrape_total = 0
 
 
 def load_config() -> dict:
@@ -62,77 +67,102 @@ def index():
     return render_template("index.html", config=config)
 
 
+def _do_scrape(config: dict) -> None:
+    global _last_campaigns, _last_results, _scrape_running, _scrape_done, _scrape_errors, _scrape_total
+    try:
+        loc = config.get("my_location", {})
+        my_lat = loc.get("lat", 37.5563)
+        my_lng = loc.get("lng", 126.9723)
+        filt = config.get("filter", {})
+        max_deadline = filt.get("max_deadline_days", 2)
+        max_ratio = filt.get("max_ratio", 3.0)
+        include_delivery = filt.get("include_delivery", False)
+        max_results = filt.get("max_results", None)
+        cities = config.get("preferred_cities", [])
+        districts = config.get("preferred_districts", [])
+        home_districts = config.get("home_districts", [])
+        categories = config.get("categories", [])
+        weights = config.get("scoring_weights", {
+            "probability": 0.5, "benefit": 0.25, "distance": 0.15, "home_bonus": 0.10,
+        })
+
+        all_campaigns = []
+        errors = []
+
+        try:
+            rn = scrape_reviewnote(max_deadline_days=max_deadline + 1)
+            all_campaigns += rn
+        except Exception as e:
+            errors.append(f"리뷰노트: {e}")
+
+        try:
+            dq_cfg = config.get("dinnerqueen", {})
+            dq = scrape_dinnerqueen(
+                cities=["서울"],
+                max_deadline_days=max_deadline,
+                email=dq_cfg.get("email", ""),
+                password=dq_cfg.get("password", ""),
+            )
+            all_campaigns += dq
+        except Exception as e:
+            errors.append(f"디너의여왕: {e}")
+
+        try:
+            gn = scrape_gangnam()
+            all_campaigns += gn
+        except Exception as e:
+            errors.append(f"강남맛집: {e}")
+
+        enrich_distance(all_campaigns, my_lat, my_lng)
+
+        picked = filters.apply(
+            all_campaigns,
+            districts=districts,
+            campaign_types=["방문"],
+            categories=categories,
+            max_deadline_days=max_deadline,
+            max_ratio=max_ratio,
+            include_delivery=include_delivery,
+            cities=cities,
+            weights=weights,
+            max_results=max_results,
+            home_districts=home_districts,
+        )
+
+        _last_campaigns = picked
+        _last_results = [_campaign_to_dict(c) for c in picked]
+        _scrape_errors = errors
+        _scrape_total = len(all_campaigns)
+    finally:
+        _scrape_running = False
+        _scrape_done = True
+
+
 @app.route("/api/run", methods=["POST"])
 def api_run():
-    global _last_campaigns, _last_results
+    global _scrape_running, _scrape_done
+    if _scrape_running:
+        return jsonify({"status": "running"})
+    _scrape_running = True
+    _scrape_done = False
     config = load_config()
-    loc = config.get("my_location", {})
-    my_lat = loc.get("lat", 37.5563)
-    my_lng = loc.get("lng", 126.9723)
-    filt = config.get("filter", {})
-    max_deadline = filt.get("max_deadline_days", 2)
-    max_ratio = filt.get("max_ratio", 3.0)
-    include_delivery = filt.get("include_delivery", False)
-    max_results = filt.get("max_results", None)
-    cities = config.get("preferred_cities", [])
-    districts = config.get("preferred_districts", [])
-    home_districts = config.get("home_districts", [])
-    categories = config.get("categories", [])
-    weights = config.get("scoring_weights", {
-        "probability": 0.5, "benefit": 0.25, "distance": 0.15, "home_bonus": 0.10,
-    })
+    t = threading.Thread(target=_do_scrape, args=(config,), daemon=True)
+    t.start()
+    return jsonify({"status": "started"})
 
-    all_campaigns = []
-    errors = []
 
-    try:
-        rn = scrape_reviewnote(max_deadline_days=max_deadline + 1)
-        all_campaigns += rn
-    except Exception as e:
-        errors.append(f"리뷰노트: {e}")
-
-    try:
-        dq_cfg = config.get("dinnerqueen", {})
-        dq = scrape_dinnerqueen(
-            cities=["서울", "경기"],
-            max_deadline_days=max_deadline,
-            email=dq_cfg.get("email", ""),
-            password=dq_cfg.get("password", ""),
-        )
-        all_campaigns += dq
-    except Exception as e:
-        errors.append(f"디너의여왕: {e}")
-
-    try:
-        gn = scrape_gangnam()
-        all_campaigns += gn
-    except Exception as e:
-        errors.append(f"강남맛집: {e}")
-
-    enrich_distance(all_campaigns, my_lat, my_lng)
-
-    picked = filters.apply(
-        all_campaigns,
-        districts=districts,
-        campaign_types=["방문"],
-        categories=categories,
-        max_deadline_days=max_deadline,
-        max_ratio=max_ratio,
-        include_delivery=include_delivery,
-        cities=cities,
-        weights=weights,
-        max_results=max_results,
-        home_districts=home_districts,
-    )
-
-    _last_campaigns = picked
-    _last_results = [_campaign_to_dict(c) for c in picked]
-
-    return jsonify({
-        "campaigns": _last_results,
-        "total_scraped": len(all_campaigns),
-        "errors": errors,
-    })
+@app.route("/api/status")
+def api_status():
+    if _scrape_running:
+        return jsonify({"status": "running"})
+    if _scrape_done:
+        return jsonify({
+            "status": "done",
+            "campaigns": _last_results,
+            "total_scraped": _scrape_total,
+            "errors": _scrape_errors,
+        })
+    return jsonify({"status": "idle"})
 
 
 @app.route("/api/campaigns")
