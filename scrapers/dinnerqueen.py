@@ -18,8 +18,12 @@ from bs4 import BeautifulSoup
 from typing import List, Optional
 from urllib.parse import urlencode
 
+import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 from models import Campaign
-from .base import curl_get, infer_category, parse_location, parse_deadline, parse_applicants
+from .base import HEADERS, infer_category, parse_location, parse_deadline, parse_applicants
 
 BASE_URL = "https://dinnerqueen.net"
 
@@ -33,7 +37,7 @@ def scrape(cities: Optional[List[str]] = None, max_deadline_days: int = 3,
     seen: set = set()
 
     for city in cities:
-        for page in range(1, 200):
+        for page in range(1, 20):
             params = {
                 "ct": "지역",
                 "order": "dday",
@@ -44,7 +48,8 @@ def scrape(cities: Optional[List[str]] = None, max_deadline_days: int = 3,
             }
             url = f"{BASE_URL}/taste?" + urlencode(params, encoding="utf-8")
             try:
-                html = curl_get(url)
+                resp = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+                html = resp.text if resp.ok else ""
                 if not html:
                     break
             except Exception as e:
